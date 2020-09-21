@@ -1,3 +1,11 @@
+/* ----------------------------
+ * Grid Data Broadcaster (GDB)
+ * ----------------------------
+ *
+ * 2020 Individual Project, National Institute of Business Management
+ * @author: Aravinda Rathnayake
+ */
+
 #include <Arduino.h>
 
 #include <SDM.h>  //Import SDM library
@@ -13,11 +21,11 @@
 #define WIFI_SSID "Fibre-IoT"
 #define WIFI_SECRET "iot@4567"
 
-#define RTS_PIN     14   //D5
-#define SDM_RX_PIN  5    //Serial Receive pin D1
-#define SDM_TX_PIN  4    //Serial Transmit pin D2
+#define RTS_PIN     14 //D5
+#define SDM_RX_PIN  5  //Serial Receive pin D1
+#define SDM_TX_PIN  4  //Serial Transmit pin D2
 
-String deviceId = WiFi.macAddress();
+const String deviceId = WiFi.macAddress();
 String lastError = "";
 
 int wifiFailCount = 0;
@@ -27,7 +35,7 @@ int modBusErrorCount = 0;
 const int ledPin = D4;
 
 SoftwareSerial swSerSDM;   //Config SoftwareSerial
-SDM sdm(swSerSDM, 2400, RTS_PIN, SWSERIAL_8N1, SDM_RX_PIN, SDM_TX_PIN);   //Config SDM
+SDM sdm(swSerSDM, 2400, RTS_PIN, SWSERIAL_8N1, SDM_RX_PIN, SDM_TX_PIN); //Config SDM
 
 //function prototypes
 int readSlave(byte);
@@ -98,7 +106,7 @@ void setup() {
 
     handleOTA();
 
-    sdm.begin();  //Initialize SDM communication
+    sdm.begin(); //Initialize SDM communication
 
     Serial.print("RX, TX: ");
     Serial.print(SDM_RX_PIN);
@@ -127,11 +135,7 @@ void loop() {
 
         t += readSlave(0x01);
 
-        t += readSlave(0x65); //101 Main Distribution
-
-        t += readSlave(0x66); //102 Kitchen Area
-
-        t += readSlave(0x67); //103 PHEV Charging Dock
+        t += readSlave(0x65); // Main Distribution (101 in Hex)
 
         if (t == 0) {
             digitalWrite(ledPin, LOW);
