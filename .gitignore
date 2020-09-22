@@ -1,4 +1,5 @@
 .pio
+CMakeListsPrivate.txt
 cmake-build-*/ 
 
 # Intellij Cache
