@@ -1,5 +1,5 @@
 /* ----------------------------
- * Grid Data Broadcaster (GDB)
+ * Power Grid Statistics Broadcaster (PGSB)
  * ----------------------------
  *
  * 2020 Individual Project, National Institute of Business Management
@@ -282,7 +282,7 @@ int sendData(float v,
         WiFiClient client;
         HTTPClient http;
 
-        const String dataUploadUrl = "http://localhost:3334/v1/gdb/payload/?deviceId=" + deviceId +
+        const String dataUploadUrl = "http://localhost:3334/v1/pgsb/payload/?deviceId=" + deviceId +
                                      "&slave=" + String((int) slaveId) +
                                      "&v=" + v +
                                      "&a=" + a +
@@ -343,7 +343,7 @@ void sendError(String error) {
         Serial.print("[HTTP] begin...\n");
         httpFailCount++;
 
-        const String errorUploadUrl = "http://localhost:3334/v1/gdb/errors/?deviceId=" + deviceId +
+        const String errorUploadUrl = "http://localhost:3334/v1/pgsb/errors/?deviceId=" + deviceId +
                                       "&error=" + error +
                                       "&rssi=" + WiFi.RSSI() +
                                       "&wifiFailed=" + String(wifiFailCount) +
