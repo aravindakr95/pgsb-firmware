@@ -17,22 +17,26 @@
 #include <ArduinoOTA.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
+#include <ArduinoJson.h>
 
-#define WIFI_SSID "Fibre-IoT"
+#define WIFI_SSID "Fibre-IoT" //todo: think way to configure wifi details on demand
 #define WIFI_SECRET "iot@4567"
 
 #define RTS_PIN     14 //D5
 #define SDM_RX_PIN  5  //Serial Receive pin D1
 #define SDM_TX_PIN  4  //Serial Transmit pin D2
 
+#define LED_LOW LOW
+#define LED_HIGH HIGH
+
 const String deviceId = WiFi.macAddress();
-String lastError = "";
+
+const int ledPinFault = D4;
+const int ledPinTransmit = D6;
 
 int wifiFailCount = 0;
 int httpFailCount = 0;
 int modBusErrorCount = 0;
-
-const int ledPin = D4;
 
 SoftwareSerial swSerSDM;   //Config SoftwareSerial
 SDM sdm(swSerSDM, 2400, RTS_PIN, SWSERIAL_8N1, SDM_RX_PIN, SDM_TX_PIN); //Config SDM
@@ -67,8 +71,10 @@ void setup() {
     String HN = deviceId;
     HN.replace(":", "");
     HN = "EM-" + HN.substring(8);
+
     Serial.println(HN);
     Serial.println(deviceId);
+
     WiFi.hostname(HN);
 
     WiFi.begin(WIFI_SSID, WIFI_SECRET);
@@ -76,16 +82,23 @@ void setup() {
 
     Serial.println("");
 
-    pinMode(ledPin, OUTPUT);
+    pinMode(ledPinFault, OUTPUT);
+    pinMode(ledPinTransmit, OUTPUT);
     pinMode(RTS_PIN, OUTPUT);
 
-    digitalWrite(ledPin, HIGH);
+    digitalWrite(ledPinFault, LED_HIGH);
+    digitalWrite(ledPinTransmit, LED_HIGH);
+
+    delay(2000);
+
+    digitalWrite(ledPinFault, LED_LOW);
+    digitalWrite(ledPinTransmit, LED_LOW);
 
     Serial.print("Connecting to ");
     Serial.print(WIFI_SSID);
     Serial.println(" ...");
 
-    digitalWrite(ledPin, LOW);
+    digitalWrite(ledPinFault, LED_HIGH);
 
     int i = 0;
 
@@ -116,43 +129,52 @@ void setup() {
     Serial.print("RE,DE: ");
     Serial.println(RTS_PIN);
 
-    digitalWrite(ledPin, HIGH);
+    digitalWrite(ledPinFault, LED_LOW);
 }
 
-int c = 0;
+int currentRound = 0;
 
 void loop() {
-    c++;
+    currentRound++;
 
-    if (c % 10 == 0) {
+    if (currentRound % 10 == 0) {
         int t = 0;
 
         Serial.println("Looping Start...");
 
-        digitalWrite(ledPin, LOW);
         delay(200);
-        digitalWrite(ledPin, HIGH);
+
+        digitalWrite(ledPinFault, LED_LOW);
+        digitalWrite(ledPinTransmit, LED_LOW);
 
         t += readSlave(0x01);
 
-        t += readSlave(0x65); // Main Distribution (101 in Hex)
+        t += readSlave(0xC9); // 1st Floor Distribution (101 in Hex), 2nd Floor Distribution (201 in Hex)
 
         if (t == 0) {
-            digitalWrite(ledPin, LOW);
+            digitalWrite(ledPinFault, LED_HIGH);
+            delay(200);
+            digitalWrite(ledPinFault, LED_LOW);
+            delay(200);
+            digitalWrite(ledPinFault, LED_HIGH);
+            delay(200);
+            digitalWrite(ledPinFault, LED_LOW);
             modBusErrorCount++;
         } else {
             modBusErrorCount = 0;
         }
-        digitalWrite(ledPin, HIGH);
+        digitalWrite(ledPinTransmit, LED_LOW);
         checkError();
+
+        Serial.println("Looping End...");
     }
 
     delay(1000); //Wait a while before next loop
 
     ArduinoOTA.handle();
 
-    if (c >= 99999) {
-        c = 0;
+    if (currentRound >= 99999) {
+        currentRound = 0;
     }
 }
 
@@ -178,7 +200,7 @@ int readSlave(byte slaveId) {
     current = sdm.readVal(SDM230_CURRENT, slaveId);
 
     if (isnan(voltage) || isnan(current)) {
-        Serial.print("Reading Error :");
+        Serial.print("Reading Error: ");
         if (isnan(voltage) && isnan(current))
             Serial.println("Voltage and Current is null");
         else if (isnan(voltage))
@@ -189,17 +211,17 @@ int readSlave(byte slaveId) {
 
         return 0;
     } else {
-        Serial.print("Voltage:   ");
+        Serial.print("Voltage: ");
         Serial.print(voltage, 2); //Display voltage
         Serial.println("V");
 
-        Serial.print("Current:   ");
-        Serial.print(current, 2);  //Display current
+        Serial.print("Current: ");
+        Serial.print(current, 2);  //Display current (amperes)
         Serial.println("A");
         delay(50);
 
         power = sdm.readVal(SDM230_POWER, slaveId);
-        Serial.print("Power:     ");
+        Serial.print("Power: ");
         Serial.print(power, 2); //Display power
         Serial.println("W");
         delay(50);
@@ -213,13 +235,13 @@ int readSlave(byte slaveId) {
         totalPower = sdm.readVal(SDM230_TOTAL_ACTIVE_ENERGY, slaveId);
         Serial.print("Total Power: ");
         Serial.print(totalPower, 2); //Display Total Power
-        Serial.println("KWH");
+        Serial.println("kWh");
         delay(50);
 
         importPower = sdm.readVal(SDM230_IMPORT_ACTIVE_ENERGY, slaveId);
         Serial.print("Import: ");
         Serial.print(importPower, 2); //Display Import KWH
-        Serial.println("KWH");
+        Serial.println("kWh");
         delay(50);
 
         exportPower = sdm.readVal(SDM230_EXPORT_ACTIVE_ENERGY, slaveId);
@@ -229,20 +251,20 @@ int readSlave(byte slaveId) {
         delay(50);
 
         powerFactor = sdm.readVal(SDM220T_POWER_FACTOR, slaveId);
-        Serial.print("PF : ");
+        Serial.print("PF: ");
         Serial.print(powerFactor, 2); //Display Power Factor
         Serial.println("");
         delay(50);
 
         int requestStatus = sendData(voltage,
-                         current,
-                         power,
-                         frequency,
-                         totalPower,
-                         importPower,
-                         exportPower,
-                         powerFactor,
-                         slaveId);
+                                     current,
+                                     power,
+                                     frequency,
+                                     totalPower,
+                                     importPower,
+                                     exportPower,
+                                     powerFactor,
+                                     slaveId);
         delay(200);
 
         return requestStatus;
@@ -265,16 +287,20 @@ void checkError() {
 
         ESP.restart();
     }
+
+    if (wifiFailCount > 1) {
+        digitalWrite(ledPinFault, LED_HIGH);
+    }
 }
 
-int sendData(float v,
-             float a,
-             float w,
-             float hz,
-             float kwh,
-             float im_kwh,
-             float ex_kwh,
-             float pf,
+int sendData(float voltage,
+             float current,
+             float power,
+             float frequency,
+             float totalPower,
+             float importPower,
+             float exportPower,
+             float powerFactor,
              byte slaveId) {
     wifiFailCount++;
 
@@ -282,25 +308,39 @@ int sendData(float v,
         WiFiClient client;
         HTTPClient http;
 
-        const String dataUploadUrl = "http://localhost:3334/v1/pgsb/payload/?deviceId=" + deviceId +
-                                     "&slave=" + String((int) slaveId) +
-                                     "&v=" + v +
-                                     "&a=" + a +
-                                     "&w=" + w +
-                                     "&hz=" + hz +
-                                     "&kwh=" + kwh +
-                                     "&im_kwh=" + im_kwh +
-                                     "&pf=" + pf +
-                                     "&ex_kwh=" + ex_kwh +
-                                     "&rssi=" + WiFi.RSSI() +
-                                     "&c=" + c;
+        const String dataUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/payloads";
+        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwic3VwcGxpZXIiOiJDRUIiLCJhY2NvdW50TnVtYmVyIjo0MzAzMTgwOTMxLCJpYXQiOjE2MDI1MDYzNzN9.u0bcQN2bpPWKBxrBxUrtV4l3vQcBqjfRD8Wi6ObiDow";
+
+        StaticJsonBuffer<1000> JSONBuffer;
+        JsonObject &JSONEncoder = JSONBuffer.createObject();
+
+        JSONEncoder["deviceId"] = deviceId;
+        JSONEncoder["slaveId"] = String((int) slaveId);
+        JSONEncoder["currentRound"] = currentRound;
+        JSONEncoder["current"] = current;
+        JSONEncoder["voltage"] = voltage;
+        JSONEncoder["power"] = power;
+        JSONEncoder["frequency"] = frequency;
+        JSONEncoder["totalPower"] = totalPower;
+        JSONEncoder["importPower"] = importPower;
+        JSONEncoder["exportPower"] = exportPower;
+        JSONEncoder["powerFactor"] = powerFactor;
+        JSONEncoder["rssi"] = WiFi.RSSI();
+
+        char JSONMessageBuffer[1000];
+        JSONEncoder.prettyPrintTo(JSONMessageBuffer, sizeof(JSONMessageBuffer));
+        Serial.println(JSONMessageBuffer);
 
         Serial.print("[HTTP] begin...\n");
 
         const bool isPosted = http.begin(client, dataUploadUrl);
+        http.addHeader("Content-Type", "application/json");
+        http.addHeader("Authorization", "Bearer " + authToken);
 
         if (isPosted) {
-            int httpCode = http.GET();
+            int httpCode = http.POST(JSONMessageBuffer);
+
+            Serial.println(httpCode);
 
             Serial.print("[HTTP] GET...\n");
 
@@ -319,11 +359,12 @@ int sendData(float v,
                               http.errorToString(httpCode).c_str());
             }
 
+            Serial.print("[HTTP] end...\n");
             http.end();
 
             wifiFailCount = 0;
         } else {
-            Serial.printf("[HTTP} Unable to connect\n");
+            Serial.printf("[HTTP] Unable to connect\n");
         }
 
         return 1;
@@ -340,21 +381,34 @@ void sendError(String error) {
         WiFiClient client;
         HTTPClient http;
 
-        Serial.print("[HTTP] begin...\n");
-        httpFailCount++;
+        const String errorUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/errors";
+        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwic3VwcGxpZXIiOiJDRUIiLCJhY2NvdW50TnVtYmVyIjo0MzAzMTgwOTMxLCJpYXQiOjE2MDI1MDYzNzN9.u0bcQN2bpPWKBxrBxUrtV4l3vQcBqjfRD8Wi6ObiDow";
 
-        const String errorUploadUrl = "http://localhost:3334/v1/pgsb/errors/?deviceId=" + deviceId +
-                                      "&error=" + error +
-                                      "&rssi=" + WiFi.RSSI() +
-                                      "&wifiFailed=" + String(wifiFailCount) +
-                                      "&httpFailed=" + String(httpFailCount);
+        StaticJsonBuffer<1000> JSONBuffer;
+        JsonObject &JSONEncoder = JSONBuffer.createObject();
+
+        JSONEncoder["deviceId"] = deviceId;
+        JSONEncoder["error"] = error;
+        JSONEncoder["rssi"] = WiFi.RSSI();
+        JSONEncoder["wifiFailCount"] = String(wifiFailCount);
+        JSONEncoder["httpFailCount"] = String(httpFailCount);
+
+        char JSONMessageBuffer[1000];
+        JSONEncoder.prettyPrintTo(JSONMessageBuffer, sizeof(JSONMessageBuffer));
+        Serial.println(JSONMessageBuffer);
+
+        Serial.print("[HTTP] begin...\n");
+
+        httpFailCount++;
 
         const bool isPosted = http.begin(client, errorUploadUrl);
 
         if (isPosted) {
             Serial.print("[HTTP] GET...\n");
 
-            int httpCode = http.GET();
+            int httpCode = http.POST(JSONMessageBuffer);
+
+            Serial.println(httpCode);
 
             if (httpCode > 0) {
                 Serial.printf("[HTTP] GET... code: %d\n", httpCode);
@@ -372,13 +426,14 @@ void sendError(String error) {
             }
 
             http.end();
+            Serial.print("[HTTP] end...\n");
         } else {
-            Serial.printf("[HTTP} Unable to connect\n");
+            Serial.printf("[HTTP] Unable to connect\n");
         }
         wifiFailCount = 0;
     } else {
         wifiFailCount++;
-        Serial.println("Skipping, No wifi");
+        Serial.println("Skipping, No WiFi network");
     }
 }
 
@@ -392,7 +447,7 @@ void handleOTA() {
         }
 
         // NOTE: if updating FS this would be the place to unmount FS using FS.end()
-        Serial.println("Start updating " + type);
+        Serial.println("Start updating: " + type);
     });
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
