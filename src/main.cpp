@@ -143,9 +143,10 @@ void loop() {
 
         Serial.println("Looping Start...");
 
-        digitalWrite(ledPinTransmit, LED_HIGH);
-
-        delay(200);
+        if (WiFi.status() == WL_CONNECTED) {
+            digitalWrite(ledPinTransmit, LED_HIGH);
+            delay(200);
+        }
 
         digitalWrite(ledPinFault, LED_LOW);
         digitalWrite(ledPinTransmit, LED_LOW);
@@ -162,6 +163,8 @@ void loop() {
             digitalWrite(ledPinFault, LED_HIGH);
             delay(200);
             digitalWrite(ledPinFault, LED_LOW);
+            delay(200);
+
             modBusErrorCount++;
         } else {
             modBusErrorCount = 0;
