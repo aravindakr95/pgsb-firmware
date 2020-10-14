@@ -2,7 +2,7 @@
  * Power Grid Statistics Broadcaster Firmware (PGSB)
  * --------------------------------------------------
  *
- * 2020 NIB303COM Individual Project, National Institute of Business Management (affiliated with Coventry University, UK)
+ * 2020© NIB303COM Individual Project, National Institute of Business Management (affiliated with Coventry University, UK)
  * @author: Aravinda Rathnayake
  */
 
