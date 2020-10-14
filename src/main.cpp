@@ -1,15 +1,13 @@
-/* ----------------------------
- * Power Grid Statistics Broadcaster (PGSB)
- * ----------------------------
+/* --------------------------------------------------
+ * Power Grid Statistics Broadcaster Firmware (PGSB)
+ * --------------------------------------------------
  *
- * 2020 Individual Project, National Institute of Business Management
+ * 2020 NIB303COM Individual Project, National Institute of Business Management (affiliated with Coventry University, UK)
  * @author: Aravinda Rathnayake
  */
 
 #include <Arduino.h>
-
-#include <SDM.h>  //Import SDM library
-#include <SoftwareSerial.h> //Import SoftwareSerial library
+#include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
@@ -17,6 +15,8 @@
 #include <ArduinoOTA.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
+
+#include <SDM.h>
 #include <ArduinoJson.h>
 
 #define WIFI_SSID "Fibre-IoT" //todo: think way to configure wifi details on demand (wifi manager)
@@ -31,6 +31,8 @@
 
 const String deviceId = WiFi.macAddress();
 
+const int maxErrorCount = 5;
+
 const int ledPinFault = D4;
 const int ledPinTransmit = D6;
 
@@ -44,21 +46,21 @@ SDM sdm(swSerSDM, 2400, RTS_PIN, SWSERIAL_8N1, SDM_RX_PIN, SDM_TX_PIN); //Config
 //function prototypes
 int readSlave(byte);
 
+int sendCustomPayload(float,
+                      float,
+                      float,
+                      float,
+                      float,
+                      float,
+                      float,
+                      float,
+                      byte);
+
 void checkError();
 
-void handleOTA();
-
-int sendData(float,
-             float,
-             float,
-             float,
-             float,
-             float,
-             float,
-             float,
-             byte);
-
 void sendError(String);
+
+void handleOTA();
 
 void setup() {
     Serial.begin(115200); //Initialize serial
@@ -113,8 +115,8 @@ void setup() {
     }
 
     Serial.println('\n');
-    Serial.println("Connection established!");
-    Serial.print("IPV4 address:\t");
+    Serial.println("WiFi connection established!");
+    Serial.print(F("IPV4 Address: "));
     Serial.println(WiFi.localIP());
 
     handleOTA();
@@ -137,8 +139,8 @@ int currentRound = 0;
 void loop() {
     currentRound++;
 
-    // start looping in every 10 number of current rounds
-    if (currentRound % 10 == 0) {
+    // start looping in every 720 number of current rounds (approx. 12 mins)
+    if (currentRound % 720 == 0) {
         int successReadsCount = 0;
 
         Serial.println("Looping Start...");
@@ -175,7 +177,7 @@ void loop() {
         Serial.println("Looping End...");
     }
 
-    delay(1000); //Wait a while before next loop
+    delay(1000); //Wait second before next loop
 
     ArduinoOTA.handle();
 
@@ -262,15 +264,15 @@ int readSlave(byte slaveId) {
         Serial.println("");
         delay(50);
 
-        int requestStatus = sendData(voltage,
-                                     current,
-                                     power,
-                                     frequency,
-                                     totalPower,
-                                     importPower,
-                                     exportPower,
-                                     powerFactor,
-                                     slaveId);
+        int requestStatus = sendCustomPayload(voltage,
+                                              current,
+                                              power,
+                                              frequency,
+                                              totalPower,
+                                              importPower,
+                                              exportPower,
+                                              powerFactor,
+                                              slaveId);
         delay(200);
 
         return requestStatus;
@@ -278,18 +280,18 @@ int readSlave(byte slaveId) {
 }
 
 void checkError() {
-    if (httpErrorCount >= 6 ||
-        wifiErrorCount >= 10 ||
-        modBusErrorCount > 30) {
-        Serial.print("MODBUS: ");
+    if (httpErrorCount >= maxErrorCount ||
+        wifiErrorCount >= maxErrorCount ||
+        modBusErrorCount > maxErrorCount) {
+        Serial.print("Modbus Errors: ");
         Serial.print(modBusErrorCount);
-        Serial.print(" ,HTTP: ");
+        Serial.print(" ,HTTP Errors: ");
         Serial.print(httpErrorCount);
-        Serial.print(" ,WiFi: ");
+        Serial.print(" ,WiFi Errors: ");
         Serial.print(wifiErrorCount);
-        Serial.println(" > Restarting ");
+        Serial.println("Restarting system...");
 
-        sendError("Reboot");
+        sendError("MAX_ERROR_COUNT_REACHED");
 
         ESP.restart();
     }
@@ -299,125 +301,115 @@ void checkError() {
     }
 }
 
-int sendData(float voltage,
-             float current,
-             float power,
-             float frequency,
-             float totalPower,
-             float importPower,
-             float exportPower,
-             float powerFactor,
-             byte slaveId) {
+int sendCustomPayload(float voltage,
+                      float current,
+                      float power,
+                      float frequency,
+                      float totalPower,
+                      float importPower,
+                      float exportPower,
+                      float powerFactor,
+                      byte slaveId) {
+    int state = 0;
+
     wifiErrorCount++;
 
     if (WiFi.status() == WL_CONNECTED) {
+        String jsonPayload;
+
         WiFiClient client;
         HTTPClient http;
 
-        const String dataUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/payloads";
+        const String dataUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/payloads?deviceId=" + deviceId + "&slaveId=" + String((int) slaveId);
         const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwic3VwcGxpZXIiOiJDRUIiLCJhY2NvdW50TnVtYmVyIjo0MzAzMTgwOTMxLCJpYXQiOjE2MDI1MDYzNzN9.u0bcQN2bpPWKBxrBxUrtV4l3vQcBqjfRD8Wi6ObiDow";
 
-        StaticJsonBuffer<600> JSONBuffer;
-        JsonObject &JSONEncoder = JSONBuffer.createObject();
+        StaticJsonDocument<500> PayloadDoc;
 
-        JSONEncoder["deviceId"] = deviceId;
-        JSONEncoder["slaveId"] = String((int) slaveId);
-        JSONEncoder["currentRound"] = currentRound;
-        JSONEncoder["current"] = current;
-        JSONEncoder["voltage"] = voltage;
-        JSONEncoder["power"] = power;
-        JSONEncoder["frequency"] = frequency;
-        JSONEncoder["totalPower"] = totalPower;
-        JSONEncoder["importPower"] = importPower;
-        JSONEncoder["exportPower"] = exportPower;
-        JSONEncoder["powerFactor"] = powerFactor;
-        JSONEncoder["rssi"] = WiFi.RSSI();
+        PayloadDoc["currentRound"] = currentRound;
+        PayloadDoc["current"] = current;
+        PayloadDoc["voltage"] = voltage;
+        PayloadDoc["power"] = power;
+        PayloadDoc["frequency"] = frequency;
+        PayloadDoc["totalPower"] = totalPower;
+        PayloadDoc["importPower"] = importPower;
+        PayloadDoc["exportPower"] = exportPower;
+        PayloadDoc["powerFactor"] = powerFactor;
+        PayloadDoc["rssi"] = WiFi.RSSI();
 
-        char JSONMessageBuffer[600];
-        JSONEncoder.prettyPrintTo(JSONMessageBuffer, sizeof(JSONMessageBuffer));
-        Serial.println(JSONMessageBuffer);
+        serializeJson(PayloadDoc, jsonPayload);
 
-        Serial.print("[HTTP] begin...\n");
+        Serial.print("[HTTP](1) begin...\n");
 
         const bool isPosted = http.begin(client, dataUploadUrl);
         http.addHeader("Content-Type", "application/json");
         http.addHeader("Authorization", "Bearer " + authToken);
 
         if (isPosted) {
-            int httpCode = http.POST(JSONMessageBuffer);
-
-            Serial.println(httpCode);
-
-            Serial.print("[HTTP] GET...\n");
+            int httpCode = http.POST(jsonPayload);
 
             if (httpCode > 0) {
-                Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+                Serial.printf("[HTTP](1) GET... code: %d\n", httpCode);
 
                 if (httpCode == HTTP_CODE_OK ||
                     httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
                     String payload = http.getString();
                     Serial.println(payload);
+
+                    state = 1;
                 }
 
                 httpErrorCount = 0;
             } else {
-                Serial.printf("[HTTP] GET... failed, error: %s\n",
+                Serial.printf("[HTTP](1) GET... failed, error: %s\n",
                               http.errorToString(httpCode).c_str());
             }
 
-            Serial.print("[HTTP] end...\n");
+            Serial.print("[HTTP](1) end...\n");
             http.end();
 
             wifiErrorCount = 0;
         } else {
-            Serial.printf("[HTTP] Unable to connect\n");
+            Serial.printf("[HTTP](1) Unable to connect\n");
         }
-
-        return 1;
     } else {
         Serial.print("Skipping, WiFi not available: ");
         Serial.println(wifiErrorCount);
-
-        return 0;
     }
+
+    return state;
 }
 
 void sendError(String error) {
     if (WiFi.status() == WL_CONNECTED) {
+        String jsonError;
+
         WiFiClient client;
         HTTPClient http;
 
         const String errorUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/errors";
         const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwic3VwcGxpZXIiOiJDRUIiLCJhY2NvdW50TnVtYmVyIjo0MzAzMTgwOTMxLCJpYXQiOjE2MDI1MDYzNzN9.u0bcQN2bpPWKBxrBxUrtV4l3vQcBqjfRD8Wi6ObiDow";
 
-        StaticJsonBuffer<600> JSONBuffer;
-        JsonObject &JSONEncoder = JSONBuffer.createObject();
+        StaticJsonDocument<500> ErrorDoc;
 
-        JSONEncoder["deviceId"] = deviceId;
-        JSONEncoder["error"] = error;
-        JSONEncoder["rssi"] = WiFi.RSSI();
-        JSONEncoder["wifiFailCount"] = String(wifiErrorCount);
-        JSONEncoder["httpFailCount"] = String(httpErrorCount);
+        ErrorDoc["deviceId"] = deviceId;
+        ErrorDoc["error"] = error;
+        ErrorDoc["rssi"] = WiFi.RSSI();
+        ErrorDoc["wifiFailCount"] = String(wifiErrorCount);
+        ErrorDoc["httpFailCount"] = String(httpErrorCount);
 
-        char JSONMessageBuffer[600];
-        JSONEncoder.prettyPrintTo(JSONMessageBuffer, sizeof(JSONMessageBuffer));
-        Serial.println(JSONMessageBuffer);
+        serializeJson(ErrorDoc, jsonError);
 
-        Serial.print("[HTTP] begin...\n");
+        Serial.print("[HTTP](2) begin...\n");
 
         httpErrorCount++;
 
         const bool isPosted = http.begin(client, errorUploadUrl);
 
         if (isPosted) {
-            Serial.print("[HTTP] GET...\n");
-
-            int httpCode = http.POST(JSONMessageBuffer);
-
-            Serial.println(httpCode);
+            int httpCode = http.POST(jsonError);
 
             if (httpCode > 0) {
-                Serial.printf("[HTTP] GET... code: %d\n", httpCode);
+                Serial.printf("[HTTP](2) GET... code: %d\n", httpCode);
 
                 if (httpCode == HTTP_CODE_OK ||
                     httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
@@ -427,14 +419,14 @@ void sendError(String error) {
 
                 httpErrorCount = 0;
             } else {
-                Serial.printf("[HTTP] GET... failed, error: %s\n",
+                Serial.printf("[HTTP](2) GET... failed, error: %s\n",
                               http.errorToString(httpCode).c_str());
             }
 
             http.end();
-            Serial.print("[HTTP] end...\n");
+            Serial.print("[HTTP](2) end...\n");
         } else {
-            Serial.printf("[HTTP] Unable to connect\n");
+            Serial.printf("[HTTP](2) Unable to connect\n");
         }
 
         wifiErrorCount = 0;
@@ -484,7 +476,7 @@ void handleOTA() {
 
     ArduinoOTA.begin();
 
-    Serial.println("Ready");
-    Serial.print("IPV4 address: ");
+    Serial.println("OTA Ready");
+    Serial.print(F("IPV4 Address: "));
     Serial.println(WiFi.localIP());
 }
