@@ -67,8 +67,6 @@ void setup() {
     Serial.begin(115200); //Initialize serial
     delay(3000);
 
-    Serial.print("---- ");
-
     WiFi.mode(WIFI_STA);
 
     String HN = deviceId;
@@ -140,8 +138,6 @@ void setup() {
 int currentRound = 0;
 
 void loop() {
-    currentRound++;
-
     if (currentRound % requestInterval == 0) {
         int successReadsCount = 0;
 
@@ -186,6 +182,8 @@ void loop() {
     if (currentRound >= 99999) {
         currentRound = 0;
     }
+
+    currentRound++;
 }
 
 int readSlave(byte slaveId) {
@@ -388,12 +386,11 @@ void sendError(String error) {
         WiFiClient client;
         HTTPClient http;
 
-        const String errorUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/errors";
+        const String errorUploadUrl = "http://192.168.1.8:4000/v1/sete/pgsb/errors?deviceId=" + deviceId;
         const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwic3VwcGxpZXIiOiJDRUIiLCJhY2NvdW50TnVtYmVyIjo0MzAzMTgwOTMxLCJpYXQiOjE2MDI1MDYzNzN9.u0bcQN2bpPWKBxrBxUrtV4l3vQcBqjfRD8Wi6ObiDow";
 
         StaticJsonDocument<500> ErrorDoc;
 
-        ErrorDoc["deviceId"] = deviceId;
         ErrorDoc["error"] = error;
         ErrorDoc["rssi"] = WiFi.RSSI();
         ErrorDoc["wifiFailCount"] = String(wifiErrorCount);
