@@ -74,7 +74,10 @@ void setup() {
     HN.replace(":", "");
     HN = "EM-" + HN.substring(8);
 
+    Serial.print("WiFi Hostname: ");
     Serial.println(HN);
+
+    Serial.print("Device ID: ");
     Serial.println(deviceId);
 
     WiFi.hostname(HN);
@@ -96,9 +99,8 @@ void setup() {
     digitalWrite(ledPinFault, LED_LOW);
     digitalWrite(ledPinTransmit, LED_LOW);
 
-    Serial.print("Connecting to ");
-    Serial.print(WIFI_SSID);
-    Serial.println(" ...");
+    Serial.print(F("Connecting WiFi SSID: "));
+    Serial.println(WIFI_SSID);
 
     digitalWrite(ledPinFault, LED_HIGH);
 
