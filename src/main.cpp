@@ -32,7 +32,7 @@
 const String deviceId = WiFi.macAddress();
 
 const int maxErrorCount = 5;
-const int requestInterval = 30; // start looping in every 360 number of current rounds (approx. 30 secs)
+const int requestInterval = 360; // approx. 6
 
 const int ledPinFault = D4;
 const int ledPinTransmit = D6;
