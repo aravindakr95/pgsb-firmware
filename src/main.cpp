@@ -2,7 +2,7 @@
  * Power Grid Statistics Broadcaster Firmware (PGSB)
  * --------------------------------------------------
  *
- * 2020© NIB303COM Individual Project, National Institute of Business Management (affiliated with Coventry University, UK)
+ * 2020© NIB303COM Individual Project, National Institute of Business Management (affiliated with Coventry University, England)
  * @author: Aravinda Rathnayake
  */
 
@@ -32,7 +32,7 @@
 const String deviceId = WiFi.macAddress();
 
 const int maxErrorCount = 5;
-const int requestInterval = 360; // approx. 6
+const int requestInterval = 360; //approx. 6 (240 requests per day)
 
 const int ledPinFault = D4;
 const int ledPinTransmit = D6;
