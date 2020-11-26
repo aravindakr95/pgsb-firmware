@@ -348,7 +348,7 @@ int sendCustomPayload(float voltage,
             int httpCode = http.POST(jsonPayload);
 
             if (httpCode > 0) {
-                Serial.printf("[HTTP](1) GET... code: %d\n", httpCode);
+                Serial.printf("[HTTP](1) POST... code: %d\n", httpCode);
 
                 if (httpCode == HTTP_CODE_OK ||
                     httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
@@ -360,7 +360,7 @@ int sendCustomPayload(float voltage,
 
                 httpErrorCount = 0;
             } else {
-                Serial.printf("[HTTP](1) GET... failed, error: %s\n",
+                Serial.printf("[HTTP](1) POST... failed, error: %s\n",
                               http.errorToString(httpCode).c_str());
             }
 
@@ -408,7 +408,7 @@ void sendError(String error) {
             int httpCode = http.POST(jsonError);
 
             if (httpCode > 0) {
-                Serial.printf("[HTTP](2) GET... code: %d\n", httpCode);
+                Serial.printf("[HTTP](2) POST... code: %d\n", httpCode);
 
                 if (httpCode == HTTP_CODE_OK ||
                     httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
@@ -418,7 +418,7 @@ void sendError(String error) {
 
                 httpErrorCount = 0;
             } else {
-                Serial.printf("[HTTP](2) GET... failed, error: %s\n",
+                Serial.printf("[HTTP](2) POST... failed, error: %s\n",
                               http.errorToString(httpCode).c_str());
             }
 
