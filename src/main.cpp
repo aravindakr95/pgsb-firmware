@@ -151,10 +151,14 @@ void loop() {
         digitalWrite(ledPinFault, LED_LOW);
         digitalWrite(ledPinTransmit, LED_LOW);
 
-        successReadsCount += readSlave(0x01);
+        // Values are in Hexadecimal
+        successReadsCount += readSlave(0x65); // Ground Floor Main
 
-        successReadsCount += readSlave(0xC9); // 1st Floor Distribution (101 in Hex), 2nd Floor Distribution (201 in Hex)
+        successReadsCount += readSlave(0x66); // Ground Floor Kitchen
 
+        successReadsCount += readSlave(0x67); // Ground Floor PHEV
+
+        successReadsCount += readSlave(0xC9); // 1st Floor Main
         if (successReadsCount == 0) {
             digitalWrite(ledPinFault, LED_HIGH);
             delay(200);
