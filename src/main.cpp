@@ -325,7 +325,7 @@ int sendCustomPayload(float voltage,
         HTTPClient http;
 
         const String dataUploadUrl = "http://sete-home.brilliant-apps.club/v1/sete/pgsb/payloads?deviceId=" + deviceId + "&slaveId=" + String((int) slaveId);
-        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwiYWNjb3VudE51bWJlciI6NDMwMzM4MDkxMiwiaWF0IjoxNjA2NDkxNDU5fQ.DqiQY2Gplu055QkajqVnRTZUPyTp7rGb_92KNsUmr3Y";
+        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hbGluZGE1NTVAZ21haWwuY29tIiwiYWNjb3VudE51bWJlciI6NDMwMzE4MDkwNCwiaWF0IjoxNjA4MjczMTI1fQ.aURQ8LkGyWV-CBiQ9YQIk1pgNXA43hs0XyP9Vx20kNI";
 
         StaticJsonDocument<500> PayloadDoc;
 
@@ -391,7 +391,7 @@ void sendError(String error) {
         HTTPClient http;
 
         const String errorUploadUrl = "http://sete-home.brilliant-apps.club/v1/sete/pgsb/errors?deviceId=" + deviceId;
-        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFyYXZpbmRhY2xvdWRAZ21haWwuY29tIiwiYWNjb3VudE51bWJlciI6NDMwMzM4MDkxMiwiaWF0IjoxNjA2NDkxNDU5fQ.DqiQY2Gplu055QkajqVnRTZUPyTp7rGb_92KNsUmr3Y";
+        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hbGluZGE1NTVAZ21haWwuY29tIiwiYWNjb3VudE51bWJlciI6NDMwMzE4MDkwNCwiaWF0IjoxNjA4MjczMTI1fQ.aURQ8LkGyWV-CBiQ9YQIk1pgNXA43hs0XyP9Vx20kNI";
 
         StaticJsonDocument<500> ErrorDoc;
 
