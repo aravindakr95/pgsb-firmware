@@ -32,7 +32,7 @@
 const String deviceId = WiFi.macAddress();
 
 const int maxErrorCount = 5;
-const int requestInterval = 360; //approx. 6 (240 requests per day)
+const int requestInterval = 10; //approx. 10 secs (8640 requests per day)
 
 const int ledPinFault = D4;
 const int ledPinTransmit = D6;
@@ -158,7 +158,7 @@ void loop() {
 
         successReadsCount += readSlave(0x67); // Ground Floor PHEV
 
-        successReadsCount += readSlave(0xC9); // 1st Floor Main
+//        successReadsCount += readSlave(0xC9); // 1st Floor Main
         if (successReadsCount == 0) {
             digitalWrite(ledPinFault, LED_HIGH);
             delay(200);
