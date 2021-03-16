@@ -2,7 +2,6 @@
  * Power Grid Statistics Broadcaster Firmware (PGSB)
  * --------------------------------------------------
  *
- * 2020© NIB303COM Individual Project, National Institute of Business Management (affiliated with Coventry University, England)
  * @author: Aravinda Rathnayake
  */
 
@@ -19,8 +18,8 @@
 #include <SDM.h>
 #include <ArduinoJson.h>
 
-#define WIFI_SSID "Fibre-IoT" //todo: think way to configure wifi details on demand (wifi manager)
-#define WIFI_SECRET "iot@4567"
+#define WIFI_SSID "WIFI_SSID" //todo: think way to configure wifi details on demand (wifi manager)
+#define WIFI_SECRET "WIFI_SECRET"
 
 #define RTS_PIN     14 //D5
 #define SDM_RX_PIN  5  //Serial Receive pin D1
@@ -324,8 +323,8 @@ int sendCustomPayload(float voltage,
         WiFiClient client;
         HTTPClient http;
 
-        const String dataUploadUrl = "http://sete-home.brilliant-apps.club/v1/sete/pgsb/payloads?deviceId=" + deviceId + "&slaveId=" + String((int) slaveId);
-        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hbGluZGE1NTVAZ21haWwuY29tIiwiYWNjb3VudE51bWJlciI6NDMwMzE4MDkwNCwiaWF0IjoxNjA4MjczMTI1fQ.aURQ8LkGyWV-CBiQ9YQIk1pgNXA43hs0XyP9Vx20kNI";
+        const String dataUploadUrl = "http://sete.example.com/v1/sete/pgsb/payloads?deviceId=" + deviceId + "&slaveId=" + String((int) slaveId);
+        const String authToken = "CONSUMER_AUTH_TOKEN";
 
         StaticJsonDocument<500> PayloadDoc;
 
@@ -390,8 +389,8 @@ void sendError(String error) {
         WiFiClient client;
         HTTPClient http;
 
-        const String errorUploadUrl = "http://sete-home.brilliant-apps.club/v1/sete/pgsb/errors?deviceId=" + deviceId;
-        const String authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1hbGluZGE1NTVAZ21haWwuY29tIiwiYWNjb3VudE51bWJlciI6NDMwMzE4MDkwNCwiaWF0IjoxNjA4MjczMTI1fQ.aURQ8LkGyWV-CBiQ9YQIk1pgNXA43hs0XyP9Vx20kNI";
+        const String errorUploadUrl = "http://sete.example.com/v1/sete/pgsb/errors?deviceId=" + deviceId;
+        const String authToken = "CONSUMER_AUTH_TOKEN";
 
         StaticJsonDocument<500> ErrorDoc;
 
